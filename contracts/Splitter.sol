@@ -33,7 +33,7 @@ contract Splitter {
         	hasRemainder = true;
         }
 
-        LogSplit(msg.sender, recipient1, recipient2)
+        LogSplit(msg.sender, recipient1, recipient2, hasRemainder)
 
         recipientBalances[recipient1] += quotient;
         recipientBalances[recipient2] += quotient;
@@ -51,6 +51,14 @@ contract Splitter {
 		public
 		returns(bool success)
 	{
+		require(withdrawAmount > 0);
+		require(recipientBalances[msg.sender] >= withdrawAmount);
 
+		recipientBalances[msg.sender] -= withdrawAmount;
+
+		LogWithdraw(msg.sender, withdrawAmount);
+		msg.sender.transfer(withdrawAmount);
+
+		return true;
 	}
 }
