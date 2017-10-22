@@ -1,8 +1,9 @@
 pragma solidity ^0.4.4;
 
-// TODO: Everything
+// TODO: Build + Write Tests + Test
+import "./Killable.sol";
 
-contract Splitter {
+contract Splitter is Killable{
 	mapping(address => uint) public recipientBalances;
 
 	event LogSplit(address sender, address recipient1, address receipient2, bool hasRemainder);
@@ -33,7 +34,7 @@ contract Splitter {
         	hasRemainder = true;
         }
 
-        LogSplit(msg.sender, recipient1, recipient2, hasRemainder)
+        LogSplit(msg.sender, recipient1, recipient2, hasRemainder);
 
         recipientBalances[recipient1] += quotient;
         recipientBalances[recipient2] += quotient;
