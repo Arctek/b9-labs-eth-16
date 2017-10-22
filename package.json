@@ -10,5 +10,5 @@
     "test": "truffle test"
   },
   "author": "Joshua Richardson (Arctek)",
-  "license": "ISC"
+  "license": "MIT"
 }
