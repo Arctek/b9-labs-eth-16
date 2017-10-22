@@ -43,6 +43,9 @@ contract('Splitter', function(accounts) {
     it('should not allow zero split amounts', () => {
     });
 
+    it('should split to the two receipients', () => {
+    });
+
     it('should send the remainder amounts to the sender', () => {
     });
 
