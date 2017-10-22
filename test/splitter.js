@@ -86,9 +86,9 @@ contract('Splitter', function(accounts) {
         }
     });
 
-    it('should split to the two receipients',  () => {
+    it('should split to the two receipients', () => {
             return contract.split(bob, carol, {from: owner, value: evenContribution}
-        ).then(success => {
+        ).then(() => {
             return contract.recipientBalances.call(bob);
         })
         .then(bobBalance => {
@@ -104,20 +104,106 @@ contract('Splitter', function(accounts) {
     });
 
     it('should send the remainder amounts to the sender', () => {
+            return contract.split(bob, carol, {from: owner, value: oddContribution}
+        ).then(() => {
+            return contract.recipientBalances.call(owner);
+        })
+        .then(ownerBalance => {
+            assert.isAbove(ownerBalance.toNumber(), 0, "the sender was not sent the remainder")
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
 
     // Withdraw checks
     it('should not allow withdraw on a paused contract', () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        ).then(success => {
+            return contract.setPaused(true, {from: owner});
+        })
+        .then( async function() {
+            try {
+                await contract.withdraw(1, {from: bob});
+                assert.fail('should have failed');
+            } catch(error) {
+                assertInvalidOpcode(error);
+            }
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
     it('should not allow withdraw on a killed contract', () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        ).then(success => {
+            return contract.kill({from: owner});
+        })
+        .then( async function() {
+            try {
+                await contract.withdraw(1, {from: bob});
+                assert.fail('should have failed');
+            } catch(error) {
+                assertInvalidOpcode(error);
+            }
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
     it('should not allow zero withdrawal', () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        )
+        .then( async function() {
+            try {
+                await contract.withdraw(0, {from: bob});
+                assert.fail('should have failed');
+            } catch(error) {
+                assertInvalidOpcode(error);
+            }
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
     it('should not allow over withdrawal', () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        )
+        .then( async function() {
+            try {
+                await contract.withdraw(evenContribution, {from: bob});
+                assert.fail('should have failed');
+            } catch(error) {
+                assertInvalidOpcode(error);
+            }
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
+    });
+
+    it('should allow a withdrawal', () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        )
+        .then(() => {
+            return contract.recipientBalances.call(bob);
+        })
+        .then(bobBalance => {
+            return contract.withdraw(bobBalance.toString(10), {from: bob});
+        })
+        .then(() => {
+            return contract.recipientBalances.call(bob);
+        })
+        .then(bobBalance => {
+            assert.strictEqual(bobBalance.toNumber(), 0, "balance should be zero")
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
     it('should not allow reentrancy from an attacker', () => {
