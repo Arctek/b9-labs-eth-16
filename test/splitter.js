@@ -86,16 +86,21 @@ contract('Splitter', function(accounts) {
         }
     });
 
-    it('should split to the two receipients', async function() {
-        let splitTx = await contract.split(bob, carol, {from: owner, value: evenContribution} );
-
-        let bobBalance = await contract.recipientBalances.call(bob);
-
-        assert.isAbove(bobBalance.toNumber(), 0, "the funds were not split");
-
-        let carolBalance = await contract.recipientBalances.call(bob);
-
-        assert.isAbove(carolBalance.toNumber(), 0, "the funds were not split");        
+    it('should split to the two receipients',  () => {
+            return contract.split(bob, carol, {from: owner, value: evenContribution}
+        ).then(success => {
+            return contract.recipientBalances.call(bob);
+        })
+        .then(bobBalance => {
+            assert.isAbove(bobBalance.toNumber(), 0, "the funds were not split")
+            return contract.recipientBalances.call(carol);
+        })
+        .then(carolBalance => {
+            assert.isAbove(carolBalance.toNumber(), 0, "the funds were not split")
+        })
+        .catch(err => {
+            assert.fail(err)
+        });
     });
 
     it('should send the remainder amounts to the sender', () => {
