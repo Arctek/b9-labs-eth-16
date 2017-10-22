@@ -1,6 +1,5 @@
 pragma solidity ^0.4.4;
 
-// TODO: Build + Write Tests + Test
 import "./Killable.sol";
 
 contract Splitter is Killable{

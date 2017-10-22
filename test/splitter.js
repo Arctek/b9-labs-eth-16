@@ -205,9 +205,4 @@ contract('Splitter', function(accounts) {
             assert.fail(err)
         });
     });
-
-    it('should not allow reentrancy from an attacker', () => {
-    });
-    
-
 });
