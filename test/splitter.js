@@ -1,32 +1,17 @@
 var Splitter = artifacts.require("./Splitter.sol");
-var eventUtil = require('../test_util/eventUtil');
 
 contract('Splitter', function(accounts) {
-    var instance;
+    var contract;
 
-    var alice   = accounts[0];
+    var owner   = accounts[0];
     var bob     = accounts[1];
     var carol   = accounts[2];
     var david   = accounts[3];
     var emma    = accounts[4];
 
     beforeEach(function() {
-        return Splitter.new({ from: alice }).then(instance => contract = instance);
+        return Splitter.new({ from: owner }).then(instance => contract = instance);
     });
-
-    // Check owner conditions
-    it('should only allow the owner to change pause', () => {
-    });
-
-    it('should only allow the owner to kill the contract', () => {
-    });
-
-    it('should not allow the owner to emergency withdraw on a unkilled contract', () => {
-    });
-
-    it('should only allow the owner to emergency withdraw', () => {
-    });
-
 
     // Split checks
     it('should not allow split on a paused contract', () => {
