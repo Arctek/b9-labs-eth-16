@@ -15,7 +15,10 @@ contract Splitter {
 		public
 		returns(bool success)
 	{
-
+		require(receipient1 != address(0));
+		require(receipient2 != address(0));
+		require(receipient1 != receipient2);
+		require(msg.value > 0);
 	}
 
 	function withdraw(uint withdrawAmount)
