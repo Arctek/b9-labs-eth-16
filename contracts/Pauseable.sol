@@ -18,7 +18,7 @@ contract Pauseable is Ownable{
 	}
 
 	function setPaused(bool newPaused) isOwner public returns(bool success) {
-		LogSetOwner(newPaused);
+		LogSetPaused(newPaused);
 		paused = newPaused;
 		return true;
 	}
