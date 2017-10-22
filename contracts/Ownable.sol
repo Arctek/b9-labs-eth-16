@@ -6,8 +6,8 @@ contract Ownable {
 	event LogSetOwner(address newOwner);
 
 	modifier isOwner(){
-      require(msg.sender == owner);
-      _;
+		require(msg.sender == owner);
+		_;
 	}
 
 	function Ownable() public{
