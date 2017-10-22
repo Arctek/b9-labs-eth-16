@@ -1,4 +1,5 @@
 var Splitter = artifacts.require("./Splitter.sol");
+var eventUtil = require('../test_util/eventUtil');
 
 contract('Splitter', function(accounts) {
     var instance;
@@ -50,7 +51,7 @@ contract('Splitter', function(accounts) {
     });
 
 
-
+    // Withdraw checks
     it('should not allow withdraw on a paused contract', () => {
     });
 
