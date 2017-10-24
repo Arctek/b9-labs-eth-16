@@ -44,9 +44,6 @@ contract('Ownable', accounts => {
         })
         .then(newOwner => {
             assert.strictEqual(newOwner, bob, "the owner was not changed")
-        })
-        .catch(err => {
-            assert.fail(err)
         });
     });
 
