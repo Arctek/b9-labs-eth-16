@@ -3,7 +3,7 @@ pragma solidity 0.4.17;
 contract Ownable {
 	address public owner;
 
-	event LogSetOwner(address newOwner);
+	event LogSetOwner(address indexed oldOwner, address indexed newOwner);
 
 	modifier isOwner(){
 		require(msg.sender == owner);
@@ -16,7 +16,8 @@ contract Ownable {
 
 	function setOwner(address newOwner) isOwner public returns(bool success) {
 		require(newOwner != address(0));
-		LogSetOwner(newOwner);
+		require(newOwner != owner);
+		LogSetOwner(owner, newOwner);
 		owner = newOwner;
 		return true;
 	}
