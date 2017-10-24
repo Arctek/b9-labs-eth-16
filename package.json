@@ -12,6 +12,8 @@
   "author": "Joshua Richardson (Arctek)",
   "license": "MIT",
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-register": "^6.26.0",
     "bluebird": "^3.5.1",
     "lodash": "^4.17.4"
   }

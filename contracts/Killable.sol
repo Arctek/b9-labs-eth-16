@@ -1,9 +1,11 @@
-pragma solidity ^0.4.4;
+pragma solidity 0.4.17;
 
 import "./Pauseable.sol";
 
 contract Killable is Pauseable{
     bool public killed;
+    bool public isWithdrawn;
+    
 
     event LogKill(address who);
     event LogEmergencyWithdrawal(address who);
@@ -25,7 +27,9 @@ contract Killable is Pauseable{
     }
 
     function emergencyWithdrawal() isOwner isKilled public returns(bool success) {
+        require(!isWithdrawn);
         LogEmergencyWithdrawal(msg.sender);
+        isWithdrawn = true;
         msg.sender.transfer(this.balance);
         return true;
     }
