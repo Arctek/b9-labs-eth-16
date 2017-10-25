@@ -108,7 +108,7 @@ contract('Splitter', accounts => {
             return contract.split(bob, carol, { from: owner, value: oddContribution }
         )
         .then(txObject => {
-            asertEventLogSplit(txObject, owner, bob, carol, evenContribution);
+            asertEventLogSplit(txObject, owner, bob, carol, oddContribution);
 
             return contract.recipientBalances.call(owner);
         })
