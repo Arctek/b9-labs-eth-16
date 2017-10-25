@@ -14,11 +14,11 @@ contract Ownable {
 		owner = msg.sender;
 	}
 
-	function setOwner(address newOwner) isOwner public returns(bool success) {
+	function setOwner(address newOwner) public isOwner returns(bool success){
 		require(newOwner != address(0));
 		require(newOwner != owner);
-		LogSetOwner(owner, newOwner);
 		owner = newOwner;
+		LogSetOwner(owner, newOwner);
 		return true;
 	}
 }

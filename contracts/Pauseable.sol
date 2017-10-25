@@ -17,10 +17,10 @@ contract Pauseable is Ownable{
         _;
     }
 
-    function setPaused(bool newPaused) isOwner public returns(bool success) {
+    function setPaused(bool newPaused) public isOwner returns(bool success) {
         require(newPaused != paused);
-        LogSetPaused(owner, newPaused);
         paused = newPaused;
+        LogSetPaused(owner, newPaused);
         return true;
     }
 }

@@ -5,10 +5,9 @@ import "./Pauseable.sol";
 contract Killable is Pauseable{
     bool public killed;
     bool public isWithdrawn;
-    
 
-    event LogKill(address who);
-    event LogEmergencyWithdrawal(address who);
+    event LogKill(address indexed who);
+    event LogEmergencyWithdrawal(address indexed who);
 
     modifier isKilled(){
         require(killed);
@@ -20,17 +19,18 @@ contract Killable is Pauseable{
         _;
     }
 
-    function kill() isOwner isNotKilled public returns(bool success) {
+    function kill() public isOwner isPaused isNotKilled returns(bool success){
         LogKill(msg.sender);
         killed = true;
         return true;
     }
 
-    function emergencyWithdrawal() isOwner isKilled public returns(bool success) {
+    function emergencyWithdrawal() public isOwner isKilled returns(bool success){
         require(!isWithdrawn);
-        LogEmergencyWithdrawal(msg.sender);
         isWithdrawn = true;
         msg.sender.transfer(this.balance);
+        LogEmergencyWithdrawal(msg.sender);
+        //suicide??
         return true;
     }
 }
