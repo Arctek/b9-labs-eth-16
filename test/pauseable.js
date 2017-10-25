@@ -30,7 +30,7 @@ contract('Pauseable', accounts => {
     });
 
     it('should be initialized as unpaused', () => {
-        return contract.paused().then(isPaused => { assert.strictEqual(isPaused, false, "paused");
+        return contract.paused().then(isPaused => { assert.strictEqual(isPaused, false, "paused was initialized incorrectly");
         });
     });
 
@@ -42,11 +42,45 @@ contract('Pauseable', accounts => {
 
     it('should allow owner to pause', () => {
             return contract.setPaused(true, { from: owner }
-        ).then(() => {
+        ).then(txObject => {
+            assert.equal(txObject.logs.length, 1, "should have received 1 event");
+            
+            assert.strictEqual(
+                txObject.logs[0].args.who,
+                owner,
+                "should be the owner");
+            assert.strictEqual(
+                txObject.logs[0].args.paused,
+                true,
+                "should be the new paused value");
+            // who and paused should be indexed
+            assert.equal(txObject.receipt.logs[0].topics.length, 3, "should have 3 topics");
+
             return contract.paused();
         })
         .then(isPaused => {
             assert.strictEqual(isPaused, true, "paused was not changed");
+        });
+    });
+
+    it('should not allow owner to change paused to the same value', () => {
+            return contract.setPaused(true, { from: owner }
+        ).then(() => {
+            return web3.eth.expectedExceptionPromise(() => {
+                return contract.setPaused(true, { from: owner });
+            }, gasToUse);
+        });
+    });
+
+    it('should allow owner to unpause', () => {
+            return contract.setPaused(true, { from: owner }
+        ).then(txObject => {
+            return contract.setPaused(false, { from: owner });
+        }).then(txObject => {
+            return contract.paused();
+        })
+        .then(isPaused => {
+            assert.strictEqual(isPaused, false, "paused was not changed");
         });
     });
 });

@@ -5,7 +5,7 @@ import "./Ownable.sol";
 contract Pauseable is Ownable{
     bool public paused;
 
-    event LogSetPaused(bool paused);
+    event LogSetPaused(address indexed who, bool indexed paused);
 
     modifier isPaused(){
         require(paused);
@@ -18,7 +18,8 @@ contract Pauseable is Ownable{
     }
 
     function setPaused(bool newPaused) isOwner public returns(bool success) {
-        LogSetPaused(newPaused);
+        require(newPaused != paused);
+        LogSetPaused(owner, newPaused);
         paused = newPaused;
         return true;
     }
