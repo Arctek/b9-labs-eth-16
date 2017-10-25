@@ -1,4 +1,4 @@
-pragma solidity 0.4.17;
+pragma solidity 0.4.15;
 
 contract Ownable {
 	address public owner;
@@ -17,8 +17,8 @@ contract Ownable {
 	function setOwner(address newOwner) public isOwner returns(bool success){
 		require(newOwner != address(0));
 		require(newOwner != owner);
-		owner = newOwner;
 		LogSetOwner(owner, newOwner);
+		owner = newOwner;
 		return true;
 	}
 }

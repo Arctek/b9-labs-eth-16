@@ -51,7 +51,7 @@ contract('Ownable', accounts => {
                 bob,
                 "should be the new owner");
             // oldOwner and newOwner should be indexed
-            assert.equal(txObject.receipt.logs[ 0 ].topics.length, 3, "should have 3 topics");
+            assert.equal(txObject.receipt.logs[0].topics.length, 3, "should have 3 topics");
 
             return contract.owner();
         })

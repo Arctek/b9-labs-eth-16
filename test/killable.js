@@ -59,14 +59,7 @@ contract('Killable', accounts => {
         it('should allow owner to kill the contract', () => {
                 return contract.kill({ from: owner }
             ).then(txObject => {
-                assert.equal(txObject.logs.length, 1, "should have received 1 event");
-                
-                assert.strictEqual(
-                    txObject.logs[0].args.who,
-                    owner,
-                    "should be the owner");
-                
-                assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+                asertEventLogKill(txObject, owner);
 
                 return contract.killed()
             }).then(newKilled => {
@@ -81,7 +74,8 @@ contract('Killable', accounts => {
         });
 
         beforeEach("should kill the contract", () => {
-            return contract.kill({ from: owner });
+            return contract.kill({ from: owner })
+                .then(txObject => { asertEventLogKill(txObject, owner); });
         });
 
         it('should not allow non-owner to emergency withdraw a killed contract', () => {
@@ -94,14 +88,7 @@ contract('Killable', accounts => {
                 return contract.emergencyWithdrawal({ from: owner }
             )
             .then(txObject => {
-                assert.equal(txObject.logs.length, 1, "should have received 1 event");
-                
-                assert.strictEqual(
-                    txObject.logs[0].args.who,
-                    owner,
-                    "should be the owner");
-                
-                assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+                asertEventLogWithdraw(txObject, owner);
 
                 return contract.isWithdrawn();
             })
@@ -113,7 +100,9 @@ contract('Killable', accounts => {
         it('should not allow owner to emergency withdraw twice', () => {
             return contract.emergencyWithdrawal({ from: owner }
             )
-            .then(() => {
+            .then(txObject => {
+                asertEventLogWithdraw(txObject, owner);
+                
                 return web3.eth.expectedExceptionPromise(() => {
                     return contract.emergencyWithdrawal({ from: owner, gas: gasToUse });
                 }, gasToUse);
@@ -122,3 +111,25 @@ contract('Killable', accounts => {
     });
 
 });
+
+function asertEventLogKill(txObject, who) {
+    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+                
+    assert.strictEqual(
+        txObject.logs[0].args.who,
+        who,
+        "should be the owner");
+    
+    assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+}
+
+function asertEventLogWithdraw(txObject, who) {
+    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+                
+    assert.strictEqual(
+        txObject.logs[0].args.who,
+        who,
+        "should be the owner");
+    
+    assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+}
