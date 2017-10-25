@@ -102,7 +102,7 @@ contract('Splitter', accounts => {
         });
     });
 
-    it('should send the remainder amounts to the sender', () => {
+    it('should attribute the remainder amount to the sender', () => {
             let quotientContribution = oddContribution - 1;
 
             return contract.split(bob, carol, { from: owner, value: oddContribution }
@@ -191,7 +191,7 @@ contract('Splitter', accounts => {
             .then(accountBalance => {
                 let expectedAccountBalance = bobAccountBalance.plus(bobContractBalance).minus(gasCost);
 
-                assert.strictEqual(expectedAccountBalance.equals(accountBalance), true, "the withdrawn amount was incorrect")
+                assert.strictEqual(expectedAccountBalance.equals(accountBalance), true, "the withdrawn amount was incorrect");
 
                 return contract.recipientBalances.call(bob);
             })

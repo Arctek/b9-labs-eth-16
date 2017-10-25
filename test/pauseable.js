@@ -56,7 +56,7 @@ contract('Pauseable', accounts => {
             return contract.setPaused(true, { from: owner }
         ).then(() => {
             return web3.eth.expectedExceptionPromise(() => {
-                return contract.setPaused(true, { from: owner });
+                return contract.setPaused(true, { from: owner, gas: gasToUse });
             }, gasToUse);
         });
     });
