@@ -39,7 +39,7 @@ contract('Killable', accounts => {
         }, gasToUse);
     });
 
-    describe("Pause contract", () => {
+    describe("Paused contract", () => {
         beforeEach("should pause the contract", () => {
             return contract.setPaused(true, { from: owner });
         });
@@ -55,22 +55,33 @@ contract('Killable', accounts => {
                 return contract.emergencyWithdrawal({ from: owner, gas: gasToUse });
             }, gasToUse);
         });
+
+        it('should allow owner to kill the contract', () => {
+                return contract.kill({ from: owner }
+            ).then(txObject => {
+                assert.equal(txObject.logs.length, 1, "should have received 1 event");
+                
+                assert.strictEqual(
+                    txObject.logs[0].args.who,
+                    owner,
+                    "should be the owner");
+                
+                assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+
+                return contract.killed()
+            }).then(newKilled => {
+                assert.strictEqual(newKilled, true, "the contract was not killed");
+            });
+        });
     });
 
-    describe("Pause and kill contract", () => {
+    describe("Paused and killed contract", () => {
         beforeEach("should pause the contract", () => {
             return contract.setPaused(true, { from: owner });
         });
 
         beforeEach("should kill the contract", () => {
             return contract.kill({ from: owner });
-        });
-
-        it('should allow owner to kill the contract', () => {
-            return contract.killed()
-            .then(newKilled => {
-                assert.strictEqual(newKilled, true, "the contract was not killed");
-            });
         });
 
         it('should not allow non-owner to emergency withdraw a killed contract', () => {
@@ -82,7 +93,16 @@ contract('Killable', accounts => {
         it('should allow owner to emergency withdraw a killed contract', () => {
                 return contract.emergencyWithdrawal({ from: owner }
             )
-            .then(() => {
+            .then(txObject => {
+                assert.equal(txObject.logs.length, 1, "should have received 1 event");
+                
+                assert.strictEqual(
+                    txObject.logs[0].args.who,
+                    owner,
+                    "should be the owner");
+                
+                assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+
                 return contract.isWithdrawn();
             })
             .then(isWithdrawn => {

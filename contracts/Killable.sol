@@ -7,7 +7,7 @@ contract Killable is Pauseable{
     bool public isWithdrawn;
 
     event LogKill(address indexed who);
-    event LogEmergencyWithdrawal(address indexed who);
+    event LogEmergencyWithdrawal(address indexed who, uint withdrawalAmount);
 
     modifier isKilled(){
         require(killed);
@@ -20,16 +20,17 @@ contract Killable is Pauseable{
     }
 
     function kill() public isOwner isPaused isNotKilled returns(bool success){
-        LogKill(msg.sender);
         killed = true;
+        LogKill(msg.sender);
         return true;
     }
 
     function emergencyWithdrawal() public isOwner isKilled returns(bool success){
         require(!isWithdrawn);
         isWithdrawn = true;
+        
+        LogEmergencyWithdrawal(msg.sender, this.balance);
         msg.sender.transfer(this.balance);
-        LogEmergencyWithdrawal(msg.sender);
         //suicide??
         return true;
     }
