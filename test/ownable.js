@@ -39,7 +39,20 @@ contract('Ownable', accounts => {
 
     it('should allow owner to set owner', () => {
         return contract.setOwner(bob, { from: owner }
-        ).then(() => {
+        ).then(txObject => {
+            assert.equal(txObject.logs.length, 1, "should have received 1 event");
+            
+            assert.strictEqual(
+                txObject.logs[0].args.oldOwner,
+                owner,
+                "should be the initial owner");
+            assert.strictEqual(
+                txObject.logs[0].args.newOwner,
+                bob,
+                "should be the new owner");
+            // oldOwner and newOwner should be indexed
+            assert.equal(txObject.receipt.logs[ 0 ].topics.length, 3, "should have 3 topics");
+
             return contract.owner();
         })
         .then(newOwner => {

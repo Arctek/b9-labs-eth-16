@@ -47,9 +47,6 @@ contract('Pauseable', accounts => {
         })
         .then(isPaused => {
             assert.strictEqual(isPaused, true, "paused was not changed");
-        })
-        .catch(err => {
-            assert.fail(err);
         });
     });
 });
