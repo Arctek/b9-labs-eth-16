@@ -1,20 +1,38 @@
 'use strict';
-const expectedExceptionPromise = require("../test_util/expected_exception_testRPC_and_geth.js");
 
-var Splitter = artifacts.require("./Splitter.sol");
+const Splitter = artifacts.require("./Splitter.sol");
+
+import { default as Promise } from 'bluebird';
+
+if (typeof web3.eth.getBlockPromise !== "function") {
+    Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+}
+
+web3.eth.getTransactionReceiptMined = require("../test_util/getTransactionReceiptMined.js");
+web3.eth.expectedPayableExceptionPromise = require("../test_util/expectedPayableExceptionPromise.js");
+web3.eth.expectedExceptionPromise = require("../test_util/expectedExceptionPromise.js");
+web3.eth.makeSureAreUnlocked = require("../test_util/makeSureAreUnlocked.js");
+web3.eth.makeSureHasAtLeast = require("../test_util/makeSureHasAtLeast.js");
 
 contract('Splitter', accounts => {
-    let contract;
-
-    const evenContribution = 2200;
-    const oddContribution  = 2201;
-
-    const owner   = accounts[0];
-    const bob     = accounts[1];
-    const carol   = accounts[2];
-
     const gasToUse = 3000000;
 
+    const evenContribution = (Math.floor(Math.random() * 100000) + 1) * 2;
+    const oddContribution  = evenContribution + 1;
+
+    let owner, bob, carol;
+
+    before("should prepare accounts", function() {
+        assert.isAtLeast(accounts.length, 3, "should have at least 3 accounts");
+        owner = accounts[0];
+        bob   = accounts[1];
+        carol = accounts[2];
+
+        return web3.eth.makeSureAreUnlocked([owner, bob, carol])
+            .then(() => web3.eth.makeSureHasAtLeast(owner, [bob, carol], evenContribution * 10))
+            .then(txObject => web3.eth.getTransactionReceiptMined(txObject));
+    });
+    
     beforeEach(() => {
         return Splitter.new({ from: owner }).then(instance => contract = instance);
     });
@@ -24,162 +42,217 @@ contract('Splitter', accounts => {
             return contract.setPaused(true, { from: owner }
         )
         .then(() => {
-            return expectedExceptionPromise(() => {
+            return web3.eth.expectedExceptionPromise(() => {
                 return contract.split(bob, carol, { from: owner, gas: gasToUse, value: evenContribution });
             }, gasToUse);
-        })
-        .catch(err => {
-            assert.fail(err);
         });
     });
    
     it('should not allow split on a killed contract', () => {
-            return contract.kill({ from: owner }
+            return contract.setPaused(true, { from: owner }
         )
         .then(() => {
-            return expectedExceptionPromise(() => {
+            return contract.kill({ from: owner });
+        })
+        .then(() => {
+            return web3.eth.expectedExceptionPromise(() => {
                 return contract.split(bob, carol, { from: owner, gas: gasToUse, value: evenContribution });
             }, gasToUse);
-        })
-        .catch(err => {
-            assert.fail(err);
         });
     });
 
-    it('should not allow receipient1 to be null', () => {
-        return expectedExceptionPromise(() => {
+    it('should not allow recipient1 to be null', () => {
+        return web3.eth.expectedExceptionPromise(() => {
             return contract.split(null, carol, { from: owner, gas: gasToUse, value: evenContribution });
         }, gasToUse);
     });
 
-    it('should not allow receipient2 to be null', () => {
-        return expectedExceptionPromise(() => {
+    it('should not allow recipient2 to be null', () => {
+        return web3.eth.expectedExceptionPromise(() => {
             return contract.split(bob, null, { from: owner, gas: gasToUse, value: evenContribution });
         }, gasToUse);
     });
 
-    it('should not allow receipient1 to be the same as receipient2', () => {
-        return expectedExceptionPromise(() => {
+    it('should not allow recipient1 to be the same as recipient2', () => {
+        return web3.eth.expectedExceptionPromise(() => {
             return contract.split(bob, bob, { from: owner, gas: gasToUse, value: evenContribution });
         }, gasToUse);
     });
 
     it('should not allow zero split amounts', () => {
-        return expectedExceptionPromise(() => {
+        return web3.eth.expectedExceptionPromise(() => {
             return contract.split(bob, carol, { from: owner, gas: gasToUse, value: 0 });
         }, gasToUse);
     });
 
-    it('should split to the two receipients', () => {
+    it('should split to the two recipients', () => {
             return contract.split(bob, carol, { from: owner, value: evenContribution }
         )
-        .then(() => {
+        .then(txObject => {
+            asertEventLogSplit(txObject, owner, bob, carol);
+
             return contract.recipientBalances.call(bob);
         })
         .then(bobBalance => {
-            assert.isAbove(bobBalance.toNumber(), 0, "the funds were not split")
+            assert.strictEqual(bobBalance.toNumber(), evenContribution / 2, "the funds were not split for bob")
             return contract.recipientBalances.call(carol);
         })
         .then(carolBalance => {
-            assert.isAbove(carolBalance.toNumber(), 0, "the funds were not split")
-        })
-        .catch(err => {
-            assert.fail(err);
+            assert.strictEqual(carolBalance.toNumber(), evenContribution / 2, "the funds were not split for carol")
         });
     });
 
     it('should send the remainder amounts to the sender', () => {
+            let quotientContribution = oddContribution - 1;
+
             return contract.split(bob, carol, { from: owner, value: oddContribution }
         )
-        .then(() => {
+        .then(txObject => {
+            asertEventLogSplit(txObject, owner, bob, carol);
+
             return contract.recipientBalances.call(owner);
         })
         .then(ownerBalance => {
-            assert.isAbove(ownerBalance.toNumber(), 0, "the sender was not sent the remainder")
-        })
-        .catch(err => {
-            assert.fail(err);
-        });
-    });
-
-
-    // Withdraw checks
-    it('should not allow withdraw on a paused contract', () => {
-            return contract.split(bob, carol, { from: owner, value: evenContribution }
-        )
-        .then(success => {
-            return contract.setPaused(true, { from: owner });
-        })
-        .then(() => {
-            return expectedExceptionPromise(() => {
-                return contract.withdraw(1, { from: bob, gas: gasToUse });
-            }, gasToUse);
-        })
-        .catch(err => {
-            console.log(err)
-            assert.fail(err);
-        });
-    });
-
-    it('should not allow withdraw on a killed contract', () => {
-            return contract.split(bob, carol, { from: owner, value: evenContribution }
-        )
-        .then(success => {
-            return contract.kill({from: owner});
-        })
-        .then(() => {
-            return expectedExceptionPromise(() => {
-                return contract.withdraw(1, { from: bob, gas: gasToUse });
-            }, gasToUse);
-        })
-        .catch(err => {
-            assert.fail(err);
-        });
-    });
-
-    it('should not allow zero withdrawal', () => {
-            return contract.split(bob, carol, { from: owner, value: evenContribution }
-        )
-        .then(() => {
-            return expectedExceptionPromise(() => {
-                return contract.withdraw(0, { from: bob, gas: gasToUse });
-            }, gasToUse);
-        })
-        .catch(err => {
-            assert.fail(err);
-        });
-    });
-
-    it('should not allow over withdrawal', () => {
-            return contract.split(bob, carol, { from: owner, value: evenContribution }
-        )
-        .then(() => {
-            return expectedExceptionPromise(() => {
-                return contract.withdraw(evenContribution, { from: bob, gas: gasToUse });
-            }, gasToUse);
-        })
-        .catch(err => {
-            assert.fail(err);
-        });
-    });
-
-    it('should allow a withdrawal', () => {
-            return contract.split(bob, carol, { from: owner, value: evenContribution }
-        )
-        .then(() => {
-            return contract.recipientBalances.call(bob);
-        })
-        .then(bobBalance => {
-            return contract.withdraw(bobBalance.toString(10), { from: bob });
+            assert.strictEqual(ownerBalance.toNumber(), 1, "the sender was not attributed the remainder")
         })
         .then(() => {
             return contract.recipientBalances.call(bob);
         })
         .then(bobBalance => {
-            assert.strictEqual(bobBalance.toNumber(), 0, "balance should be zero")
+            assert.strictEqual(bobBalance.toNumber(), quotientContribution / 2, "the funds were not split for bob")
         })
-        .catch(err => {
-            assert.fail(err);
+        .then(() => {
+            return contract.recipientBalances.call(carol);
+        })
+        .then(carolBalance => {
+            assert.strictEqual(carolBalance.toNumber(), quotientContribution / 2, "the funds were not split for carol")
+        });
+    });
+
+
+    // Withdraw checks upon having split
+    describe("Receipients have a split balance", () => {
+        beforeEach(() => {
+            return contract.split(bob, carol, { from: owner, value: evenContribution })
+                .then(txObject => { asertEventLogSplit(txObject, owner, bob, carol); });
+        });
+
+        it('should not allow withdraw on a paused contract', () => {
+                return contract.setPaused(true, { from: owner }
+            )
+            .then(() => {
+                return web3.eth.expectedExceptionPromise(() => {
+                    return contract.withdraw({ from: bob, gas: gasToUse });
+                }, gasToUse);
+            });
+        });
+
+        it('should not allow withdraw on a killed contract', () => {
+                return contract.setPaused(true, { from: owner }
+            )
+            .then(() => {
+                return contract.kill({ from: owner });
+            })
+            .then(() => {
+                return web3.eth.expectedExceptionPromise(() => {
+                    return contract.withdraw({ from: bob, gas: gasToUse });
+                }, gasToUse);
+            });
+        });
+
+        it('should allow a withdrawal', () => {
+                let bobContractBalance;
+                let bobAccountBalance;
+                let gasCost;
+                let gasUsed;
+
+                return web3.eth.getBalancePromise(bob)
+            .then(accountBalance => {
+                bobAccountBalance = accountBalance;
+
+                return contract.recipientBalances.call(bob);
+            })
+            .then(contractBalance => {
+                bobContractBalance = contractBalance;
+                return contract.withdraw({ from: bob });
+            })
+            .then(txObject => {
+                asertEventLogWithdraw(txObject, bob, bobContractBalance);
+
+                gasUsed = txObject.receipt.gasUsed;
+
+                return web3.eth.getTransaction(txObject.tx)
+            })
+            .then(tx => {
+                gasCost = tx.gasPrice.times(gasUsed);
+
+                return web3.eth.getBalancePromise(bob);
+            })
+            .then(accountBalance => {
+                let expectedAccountBalance = bobAccountBalance.plus(bobContractBalance).minus(gasCost);
+
+                assert.strictEqual(expectedAccountBalance.equals(accountBalance), true, "the withdrawn amount was incorrect")
+
+                return contract.recipientBalances.call(bob);
+            })
+            .then(contractBalance => {
+                assert.strictEqual(contractBalance.toNumber(), 0, "contract balance should be zero");                
+            });
+        });
+
+        it('should not allow a double withdrawal', () => {
+                let bobContractBalance;
+
+                return contract.recipientBalances.call(bob)
+            .then(contractBalance => {
+                bobContractBalance = contractBalance;
+                return contract.withdraw({ from: bob });
+            })
+            .then(txObject => {
+                asertEventLogWithdraw(txObject, bob, bobContractBalance);
+
+                return contract.recipientBalances.call(bob);
+            })
+            .then(() => {
+                return web3.eth.expectedExceptionPromise(() => {
+                    return contract.withdraw({ from: bob, gas: gasToUse });
+                }, gasToUse);
+            })
+
         });
     });
 });
+
+function asertEventLogSplit(txObject, sender, recipient1, recipient2) {
+    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+
+    assert.strictEqual(
+        txObject.logs[0].args.sender,
+        sender,
+        "should be sender");
+    assert.strictEqual(
+        txObject.logs[0].args.recipient1,
+        recipient1,
+        "should be recipient1");
+    assert.strictEqual(
+        txObject.logs[0].args.recipient2,
+        recipient2,
+        "should be recipient2");
+    
+    assert.equal(txObject.receipt.logs[0].topics.length, 4, "should have 4 topics");
+}
+
+function asertEventLogWithdraw(txObject, recipient, withdrawAmount) {
+    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+
+    assert.strictEqual(
+        txObject.logs[0].args.recipient,
+        recipient,
+        "should be recipient");
+    assert.strictEqual(
+        txObject.logs[0].args.withdrawAmount.toString(10),
+        withdrawAmount.toString(10),
+        "should be expected withdraw amount");
+    
+    assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+}

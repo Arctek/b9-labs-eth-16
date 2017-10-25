@@ -1,18 +1,18 @@
-pragma solidity 0.4.17;
+pragma solidity 0.4.15;
 
 import "./Killable.sol";
 
 contract Splitter is Killable{
     mapping(address => uint) public recipientBalances;
 
-    event LogSplit(address sender, address recipient1, address receipient2, bool hasRemainder);
-    event LogWithdraw(address recipient, uint withdrawAmount);
+    event LogSplit(address indexed sender, address indexed recipient1, address indexed recipient2); 
+    event LogWithdraw(address indexed recipient, uint withdrawAmount);
 
     function split(address recipient1, address recipient2) 
+        public
         isNotPaused
         isNotKilled
         payable
-        public
         returns(bool success)
     {
         uint quotient;
@@ -33,7 +33,7 @@ contract Splitter is Killable{
             hasRemainder = true;
         }
 
-        LogSplit(msg.sender, recipient1, recipient2, hasRemainder);
+        LogSplit(msg.sender, recipient1, recipient2);
 
         recipientBalances[recipient1] += quotient;
         recipientBalances[recipient2] += quotient;
@@ -42,22 +42,25 @@ contract Splitter is Killable{
             recipientBalances[msg.sender] += remainder;
         }
 
+        
+
         return true;
     }
 
-    function withdraw(uint withdrawAmount)
+    function withdraw()
+        public
         isNotPaused
         isNotKilled
-        public
         returns(bool success)
     {
-        require(withdrawAmount > 0);
-        require(recipientBalances[msg.sender] >= withdrawAmount);
+        require(recipientBalances[msg.sender] > 0);
 
-        recipientBalances[msg.sender] -= withdrawAmount;
+        uint withdrawAmount = recipientBalances[msg.sender];
 
-        LogWithdraw(msg.sender, withdrawAmount);
+        recipientBalances[msg.sender] = 0;
+
         msg.sender.transfer(withdrawAmount);
+        LogWithdraw(msg.sender, withdrawAmount);
 
         return true;
     }
