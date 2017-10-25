@@ -89,7 +89,7 @@ contract('Splitter', accounts => {
             return contract.split(bob, carol, { from: owner, value: evenContribution }
         )
         .then(txObject => {
-            asertEventLogSplit(txObject, owner, bob, carol);
+            asertEventLogSplit(txObject, owner, bob, carol, evenContribution);
 
             return contract.recipientBalances.call(bob);
         })
@@ -108,7 +108,7 @@ contract('Splitter', accounts => {
             return contract.split(bob, carol, { from: owner, value: oddContribution }
         )
         .then(txObject => {
-            asertEventLogSplit(txObject, owner, bob, carol);
+            asertEventLogSplit(txObject, owner, bob, carol, evenContribution);
 
             return contract.recipientBalances.call(owner);
         })
@@ -134,7 +134,7 @@ contract('Splitter', accounts => {
     describe("Receipients have a split balance", () => {
         beforeEach(() => {
             return contract.split(bob, carol, { from: owner, value: evenContribution })
-                .then(txObject => { asertEventLogSplit(txObject, owner, bob, carol); });
+                .then(txObject => { asertEventLogSplit(txObject, owner, bob, carol, evenContribution); });
         });
 
         it('should not allow withdraw on a paused contract', () => {
@@ -223,7 +223,7 @@ contract('Splitter', accounts => {
     });
 });
 
-function asertEventLogSplit(txObject, sender, recipient1, recipient2) {
+function asertEventLogSplit(txObject, sender, recipient1, recipient2, splitAmount) {
     assert.equal(txObject.logs.length, 1, "should have received 1 event");
 
     assert.strictEqual(
@@ -238,7 +238,11 @@ function asertEventLogSplit(txObject, sender, recipient1, recipient2) {
         txObject.logs[0].args.recipient2,
         recipient2,
         "should be recipient2");
-    
+    assert.strictEqual(
+        txObject.logs[0].args.splitAmount.toString(10),
+        splitAmount.toString(),
+        "should be split amount");
+
     assert.equal(txObject.receipt.logs[0].topics.length, 4, "should have 4 topics");
 }
 

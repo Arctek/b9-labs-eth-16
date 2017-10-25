@@ -5,7 +5,7 @@ import "./Killable.sol";
 contract Splitter is Killable{
     mapping(address => uint) public recipientBalances;
 
-    event LogSplit(address indexed sender, address indexed recipient1, address indexed recipient2); 
+    event LogSplit(address indexed sender, address indexed recipient1, address indexed recipient2, uint splitAmount); 
     event LogWithdraw(address indexed recipient, uint withdrawAmount);
 
     function split(address recipient1, address recipient2) 
@@ -33,7 +33,7 @@ contract Splitter is Killable{
             hasRemainder = true;
         }
 
-        LogSplit(msg.sender, recipient1, recipient2);
+        LogSplit(msg.sender, recipient1, recipient2, msg.value);
 
         recipientBalances[recipient1] += quotient;
         recipientBalances[recipient2] += quotient;
