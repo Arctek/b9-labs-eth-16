@@ -20,7 +20,14 @@ module.exports = function expectedExceptionPromise(actionPromise, gasToUse, time
         })
         .then(function(receipt) {
             // We are in Geth
-            assert.equal(receipt.gasUsed, gasToUse, "should have used all the gas");
+            // Check if the status field is present, post byzantine hardfork, this will be 0x0 if the transaction failed and potentially return all gas
+            if (receipt.hasOwnProperty("status")) {
+                assert.equal(receipt.status, 0, "should have a failed status");
+            }
+            else {
+                // pre byzantine
+                assert.equal(receipt.gasUsed, gasToUse, "should have used all the gas");
+            }
         })
         .catch(function(e) {
             if (e.message.indexOf("invalid opcode") > -1 ||
