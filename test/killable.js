@@ -109,6 +109,16 @@ contract('Killable', accounts => {
                 assert.strictEqual(isWithdrawn, true, "the owner could not emergency withdraw");
             });
         });
+
+        it('should not allow owner to emergency withdraw twice', () => {
+            return contract.emergencyWithdrawal({ from: owner }
+            )
+            .then(() => {
+                return web3.eth.expectedExceptionPromise(() => {
+                    return contract.emergencyWithdrawal({ from: owner, gas: gasToUse });
+                }, gasToUse);
+            });
+        });
     });
 
 });
