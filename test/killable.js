@@ -133,16 +133,12 @@ contract('Killable', accounts => {
             assert.isTrue(results[6], "the is withdrawn state was not set correclty");
         });
 
-        it('should not allow owner to emergency withdraw twice', async () => {
-            let txObject;
-
-            await web3.eth.sequentialPromise([
-                () => contract.emergencyWithdrawal({ from: owner }).then(tx => txObject = tx),
+        it('should not allow owner to emergency withdraw twice', () => {
+            return web3.eth.sequentialPromise([
+                () => contract.emergencyWithdrawal({ from: owner }),
                 () => web3.eth.expectedExceptionPromise(() => 
                             contract.emergencyWithdrawal({ from: owner, gas: gasToUse }), gasToUse)
             ]);
-
-            assertEventLogEmergencyWithdrawal(txObject, owner);
         });
 
     });

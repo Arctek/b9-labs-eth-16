@@ -56,8 +56,8 @@ contract('Pauseable', accounts => {
         assert.isTrue(results[1], true, "paused was not changed");
     });
 
-    it('should not allow owner to change paused to the same value', async () => {
-        await web3.eth.sequentialPromise([
+    it('should not allow owner to change paused to the same value', () => {
+        return web3.eth.sequentialPromise([
             () => contract.setPaused(true, { from: owner }),
             () => web3.eth.expectedExceptionPromise(() => 
                     contract.setPaused(true, { from: owner, gas: gasToUse }), gasToUse)
