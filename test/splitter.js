@@ -4,6 +4,7 @@ const Splitter = artifacts.require("./Splitter.sol");
 
 import { default as Promise } from 'bluebird';
 
+
 if (typeof web3.eth.getBlockPromise !== "function") {
     Promise.promisifyAll(web3.eth, { suffix: "Promise" });
 }
@@ -17,8 +18,8 @@ web3.eth.makeSureHasAtLeast = require("../test_util/makeSureHasAtLeast.js");
 contract('Splitter', accounts => {
     const gasToUse = 3000000;
 
-    const evenContribution = (Math.floor(Math.random() * 100000) + 1) * 2;
-    const oddContribution  = evenContribution + 1;
+    const evenContribution = new web3.BigNumber((Math.floor(Math.random() * 100000) + 1) * 2);
+    const oddContribution  = evenContribution.plus(1);
 
     let owner, bob, carol;
 
@@ -94,16 +95,17 @@ contract('Splitter', accounts => {
             return contract.recipientBalances.call(bob);
         })
         .then(bobBalance => {
-            assert.strictEqual(bobBalance.toNumber(), evenContribution / 2, "the funds were not split for bob")
+            assert.strictEqual(bobBalance.equals(evenContribution.dividedBy(2)), true, "the funds were not split for bob")
             return contract.recipientBalances.call(carol);
         })
         .then(carolBalance => {
-            assert.strictEqual(carolBalance.toNumber(), evenContribution / 2, "the funds were not split for carol")
+            assert.strictEqual(carolBalance.equals(evenContribution.dividedBy(2)), true, "the funds were not split for carol")
         });
     });
 
     it('should attribute the remainder amount to the sender', () => {
-            let quotientContribution = oddContribution - 1;
+            let quotientContribution = oddContribution.minus(1);
+            let halfContribution = quotientContribution.dividedBy(2);
 
             return contract.split(bob, carol, { from: owner, value: oddContribution }
         )
@@ -113,19 +115,19 @@ contract('Splitter', accounts => {
             return contract.recipientBalances.call(owner);
         })
         .then(ownerBalance => {
-            assert.strictEqual(ownerBalance.toNumber(), 1, "the sender was not attributed the remainder")
+            assert.strictEqual(ownerBalance.equals(1), true, "the sender was not attributed the remainder")
         })
         .then(() => {
             return contract.recipientBalances.call(bob);
         })
         .then(bobBalance => {
-            assert.strictEqual(bobBalance.toNumber(), quotientContribution / 2, "the funds were not split for bob")
+            assert.strictEqual(bobBalance.equals(halfContribution), true, "the funds were not split for bob")
         })
         .then(() => {
             return contract.recipientBalances.call(carol);
         })
         .then(carolBalance => {
-            assert.strictEqual(carolBalance.toNumber(), quotientContribution / 2, "the funds were not split for carol")
+            assert.strictEqual(carolBalance.equals(halfContribution), true, "the funds were not split for carol")
         });
     });
 
@@ -173,7 +175,7 @@ contract('Splitter', accounts => {
                 return contract.recipientBalances.call(bob);
             })
             .then(contractBalance => {
-                bobContractBalance = contractBalance;
+                bobContractBalance = new web3.BigNumber(contractBalance);
                 return contract.withdraw({ from: bob });
             })
             .then(txObject => {
@@ -196,7 +198,7 @@ contract('Splitter', accounts => {
                 return contract.recipientBalances.call(bob);
             })
             .then(contractBalance => {
-                assert.strictEqual(contractBalance.toNumber(), 0, "contract balance should be zero");                
+                assert.strictEqual(contractBalance.equals(0), true, "contract balance should be zero");                
             });
         });
 
@@ -224,7 +226,8 @@ contract('Splitter', accounts => {
 });
 
 function asertEventLogSplit(txObject, sender, recipient1, recipient2, splitAmount) {
-    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+    assert.strictEqual(txObject.logs.length, 1, "should have received 1 event");
+    assert.strictEqual(txObject.logs[0].event, "LogSplit", "should have received LogSplit event");
 
     assert.strictEqual(
         txObject.logs[0].args.sender,
@@ -239,24 +242,40 @@ function asertEventLogSplit(txObject, sender, recipient1, recipient2, splitAmoun
         recipient2,
         "should be recipient2");
     assert.strictEqual(
-        txObject.logs[0].args.splitAmount.toString(10),
-        splitAmount.toString(),
+        txObject.logs[0].args.splitAmount.equals(splitAmount),
+        true,
         "should be split amount");
 
-    assert.equal(txObject.receipt.logs[0].topics.length, 4, "should have 4 topics");
+    assert.strictEqual(txObject.receipt.logs[0].topics.length, 4, "should have 4 topics");
+
+    assertTopicContainsAddress(txObject.receipt.logs[0].topics[1], sender);
+    assertTopicContainsAddress(txObject.receipt.logs[0].topics[2], recipient1);
+    assertTopicContainsAddress(txObject.receipt.logs[0].topics[3], recipient2);
 }
 
 function asertEventLogWithdraw(txObject, recipient, withdrawAmount) {
-    assert.equal(txObject.logs.length, 1, "should have received 1 event");
+    assert.strictEqual(txObject.logs.length, 1, "should have received 1 event");
+    assert.strictEqual(txObject.logs[0].event, "LogWithdraw", "should have received LogWithdraw event");
 
     assert.strictEqual(
         txObject.logs[0].args.recipient,
         recipient,
         "should be recipient");
     assert.strictEqual(
-        txObject.logs[0].args.withdrawAmount.toString(10),
-        withdrawAmount.toString(10),
+        txObject.logs[0].args.withdrawAmount.equals(withdrawAmount),
+        true,
         "should be expected withdraw amount");
     
-    assert.equal(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+    assert.strictEqual(txObject.receipt.logs[0].topics.length, 2, "should have 2 topics");
+
+    assertTopicContainsAddress(txObject.receipt.logs[0].topics[1], recipient);
+}
+
+function assertTopicContainsAddress(topic, address) {
+    assert.strictEqual(address.length, 42, "should be 42 characters long");
+    assert.strictEqual(topic.length, 66, "should be 64 characters long");
+
+    address = "0x" + address.substring(2).padStart(64, "0");
+
+    assert.strictEqual(topic, address, "topic should match address");
 }

@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * @param {!Function.<!Promise>} action
  * @returns {!Promise} which throws unless the action yielded "Cannot send value to non-payable function".

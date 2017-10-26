@@ -17,7 +17,6 @@ contract Splitter is Killable{
     {
         uint quotient;
         uint remainder;
-        bool hasRemainder;
 
         require(recipient1 != address(0));
         require(recipient2 != address(0));
@@ -29,20 +28,14 @@ contract Splitter is Killable{
 
         require(quotient > 0);
 
-        if (remainder > 0) {
-            hasRemainder = true;
-        }
-
-        LogSplit(msg.sender, recipient1, recipient2, msg.value);
-
         recipientBalances[recipient1] += quotient;
         recipientBalances[recipient2] += quotient;
 
-        if (hasRemainder) {
+        if (remainder > 0) {
             recipientBalances[msg.sender] += remainder;
         }
 
-        
+        LogSplit(msg.sender, recipient1, recipient2, msg.value);
 
         return true;
     }

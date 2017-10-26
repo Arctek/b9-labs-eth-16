@@ -1,3 +1,4 @@
+"use strict";
 const sequentialPromise = require("./sequentialPromise.js");
 
 /**
