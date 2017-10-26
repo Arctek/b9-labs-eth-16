@@ -117,7 +117,7 @@ contract('Killable', accounts => {
             let gasCost = web3.eth.calculateGasCost(txObject, tx);
             let expectedAccountBalance = ownerAccountBalance.plus(contractInitialBalance).minus(gasCost);
 
-            assertEventLogEmergencyWithdrawal(txObject, owner);                
+            assertEventLogEmergencyWithdrawal(txObject, owner);
             
             assert.deepEqual(newOwnerAccountBalance, expectedAccountBalance, "the emergency withdrawn amount was incorrect");
             assert.deepEqual(newContractBalance, zeroBigNumber, "contract balance should be zero");
