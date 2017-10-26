@@ -19,13 +19,25 @@ web3.eth.makeSureHasAtLeast = require("../test_util/makeSureHasAtLeast.js");
 contract('Killable', accounts => {
     const gasToUse = 3000000;
     const existingAddressBalance = new web3.BigNumber((Math.floor(Math.random() * 100000) + 1) * 2);
-    let owner, bob;
+    let owner, bob, owner2;
 
     before("should prepare accounts", function() {
-        assert.isAtLeast(accounts.length, 2, "should have at least 2 accounts");
+        assert.isAtLeast(accounts.length, 3, "should have at least 3 accounts");
         owner = accounts[0];
         bob = accounts[1];
-        return web3.eth.makeSureAreUnlocked([owner, bob]);
+        owner2 = accounts[2];
+
+        return web3.eth.makeSureAreUnlocked([owner, bob, owner2])
+            .then(() => {
+                return web3.eth.getCoinbasePromise();
+            })
+            .then(coinbaseAccount => {
+                assert.notEqual(coinbaseAccount, owner2, "owner2 should not be coinbase for testing");
+            })
+            .then(() => web3.eth.makeSureHasAtLeast(owner, [bob, owner2], web3.toWei(2)))
+            .then(txObject => web3.eth.getTransactionReceiptMined(txObject))
+            .then(() => web3.eth.makeSureHasAtLeast(owner2, [bob, owner], web3.toWei(2)))
+            .then(txObject => web3.eth.getTransactionReceiptMined(txObject));
     });
 
     describe("Contract and kill actions", () => {
@@ -75,16 +87,17 @@ contract('Killable', accounts => {
     });
 
     describe("Withdraw actions", () => {
-        // There is no way to send ETH to the Killable on its own contract, so lets creat the contract at an address than has some.
+        // There is no way to send ETH to the Killable on its own contract, so lets create the contract at an address than has some.
         // Then we can check it actually sends ether back when it is emergency withdrawn.
+        // Use owner2 here otherwise mining in geth will change the account balance in between what we expect
         beforeEach("should create a contract on an address that has a balance", () => {
             let futureAddress;
 
-            return web3.eth.getTransactionCountPromise(owner)
+            return web3.eth.getTransactionCountPromise(owner2)
                 .then(currentNonce => {
-                    futureAddress = ethJsUtil.bufferToHex(ethJsUtil.generateAddress(owner, currentNonce + 1));
+                    futureAddress = ethJsUtil.bufferToHex(ethJsUtil.generateAddress(owner2, currentNonce + 1));
                     return web3.eth.sendTransactionPromise({
-                        from: owner,
+                        from: owner2,
                         to: futureAddress,
                         value: existingAddressBalance
                     });
@@ -92,7 +105,7 @@ contract('Killable', accounts => {
                 .then(tx => {
                     return web3.eth.getTransactionReceiptMined(tx);
                 })
-                .then(receipt => Killable.new({ from: owner }))
+                .then(receipt => Killable.new({ from: owner2 }))
                 .then(instance => {
                     contract = instance;
 
@@ -104,12 +117,12 @@ contract('Killable', accounts => {
         });
 
         beforeEach("should pause the contract", () => {
-            return contract.setPaused(true, { from: owner });
+            return contract.setPaused(true, { from: owner2 });
         });
 
         beforeEach("should kill the contract", () => {
-            return contract.kill({ from: owner })
-                .then(txObject => { asertEventLogKill(txObject, owner); });
+            return contract.kill({ from: owner2 })
+                .then(txObject => { asertEventLogKill(txObject, owner2); });
         });
 
         it('should not allow non-owner to emergency withdraw a killed contract', () => {
@@ -123,38 +136,40 @@ contract('Killable', accounts => {
                 let contractInitialBalance;
                 let gasCost;
                 let gasUsed;
+                let gasPrice;
 
-                return web3.eth.getBalancePromise(owner)
+                return web3.eth.getBalancePromise(owner2)
             .then(accountBalance => {
                 ownerAccountBalance = accountBalance;
 
                 return web3.eth.getBalancePromise(contract.address);
             }).then(contractBalance => {
-                contractInitialBalance = new web3.BigNumber(contractBalance);
+                contractInitialBalance = contractBalance;
 
-                return contract.emergencyWithdrawal({ from: owner });
+                return contract.emergencyWithdrawal({ from: owner2 });
             })
             .then(txObject => {
                 gasUsed = txObject.receipt.gasUsed;
 
-                asertEventLogEmergencyWithdrawal(txObject, owner);
+                asertEventLogEmergencyWithdrawal(txObject, owner2);
 
-                return web3.eth.getTransaction(txObject.tx)
+                return web3.eth.getTransaction(txObject.tx);
             })
             .then(tx => {
+                gasPrice = tx.gasPrice;
                 gasCost = tx.gasPrice.times(gasUsed);
 
-                return web3.eth.getBalancePromise(owner);
+                return web3.eth.getBalancePromise(owner2);
             })
             .then(accountBalance => {
                 let expectedAccountBalance = ownerAccountBalance.plus(contractInitialBalance).minus(gasCost);
-
+                
                 assert.strictEqual(expectedAccountBalance.equals(accountBalance), true, "the emergency withdrawn amount was incorrect");
 
                 return web3.eth.getBalancePromise(contract.address);
             })
             .then(contractBalance => {
-                assert.strictEqual(contractBalance.toNumber(), 0, "contract balance should be zero");
+                assert.strictEqual(contractBalance.equals(0), true, "contract balance should be zero");
 
                 return contract.isWithdrawn();
             })
@@ -164,13 +179,13 @@ contract('Killable', accounts => {
         });
 
         it('should not allow owner to emergency withdraw twice', () => {
-            return contract.emergencyWithdrawal({ from: owner }
+            return contract.emergencyWithdrawal({ from: owner2 }
             )
             .then(txObject => {
-                asertEventLogEmergencyWithdrawal(txObject, owner);
+                asertEventLogEmergencyWithdrawal(txObject, owner2);
                 
                 return web3.eth.expectedExceptionPromise(() => {
-                    return contract.emergencyWithdrawal({ from: owner, gas: gasToUse });
+                    return contract.emergencyWithdrawal({ from: owner2, gas: gasToUse });
                 }, gasToUse);
             });
         });
