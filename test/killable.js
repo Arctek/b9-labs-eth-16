@@ -70,16 +70,12 @@ contract('Killable', accounts => {
             });
 
             it('should allow owner to kill the contract', async () => {
-                let txObject;
-
-                let results = await web3.eth.sequentialPromise([
-                    () => contract.kill({ from: owner }).then(tx => txObject = tx),
-                    () => contract.killed()
-                ]);
+                let txObject = await contract.kill({ from: owner });
+                let killed = await contract.killed();
 
                 assertEventLogKill(txObject, owner);
 
-                assert.isTrue(results[1], "the contract was not killed");
+                assert.isTrue(killed, "the contract was not killed");
             });
         });
     });
@@ -109,36 +105,31 @@ contract('Killable', accounts => {
         });
 
         it('should allow owner to emergency withdraw a killed contract', async () => {
-            let txObject;
+            let ownerAccountBalance = await web3.eth.getBalancePromise(owner);
+            let contractInitialBalance = await web3.eth.getBalancePromise(contract.address);
 
-            let results = await web3.eth.sequentialPromise([
-                () => web3.eth.getBalancePromise(owner),
-                () => web3.eth.getBalancePromise(contract.address),
-                () => contract.emergencyWithdrawal({ from: owner }).then(tx => txObject = tx),
-                () => web3.eth.getTransaction(txObject.tx),
-                () => web3.eth.getBalancePromise(owner),
-                () => web3.eth.getBalancePromise(contract.address),
-                () => contract.isWithdrawn()
-            ]);
-        
-            let ownerAccountBalance = results[0];
-            let contractInitialBalance = results[1];
-            let gasCost = web3.eth.calculateGasCost(txObject, results[3]);
+            let txObject = await contract.emergencyWithdrawal({ from: owner });
+            let tx = await web3.eth.getTransaction(txObject.tx);
+            let withdrawn = await contract.isWithdrawn();
+
+            let newOwnerAccountBalance = await web3.eth.getBalancePromise(owner);
+            let newContractBalance = await web3.eth.getBalancePromise(contract.address);
+
+            let gasCost = web3.eth.calculateGasCost(txObject, tx);
             let expectedAccountBalance = ownerAccountBalance.plus(contractInitialBalance).minus(gasCost);
 
             assertEventLogEmergencyWithdrawal(txObject, owner);                
             
-            assert.deepEqual(results[4], expectedAccountBalance, "the emergency withdrawn amount was incorrect");
-            assert.deepEqual(results[5], zeroBigNumber, "contract balance should be zero");
-            assert.isTrue(results[6], "the is withdrawn state was not set correclty");
+            assert.deepEqual(newOwnerAccountBalance, expectedAccountBalance, "the emergency withdrawn amount was incorrect");
+            assert.deepEqual(newContractBalance, zeroBigNumber, "contract balance should be zero");
+            assert.isTrue(withdrawn, "the is withdrawn state was not set correclty");
         });
 
-        it('should not allow owner to emergency withdraw twice', () => {
-            return web3.eth.sequentialPromise([
-                () => contract.emergencyWithdrawal({ from: owner }),
-                () => web3.eth.expectedExceptionPromise(() => 
-                            contract.emergencyWithdrawal({ from: owner, gas: gasToUse }), gasToUse)
-            ]);
+        it('should not allow owner to emergency withdraw twice', async () => {
+            await contract.emergencyWithdrawal({ from: owner });
+
+            return web3.eth.expectedExceptionPromise(() => 
+                contract.emergencyWithdrawal({ from: owner, gas: gasToUse }), gasToUse);
         });
 
     });

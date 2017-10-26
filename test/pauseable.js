@@ -13,7 +13,6 @@ web3.eth.expectedPayableExceptionPromise = require("../test_util/expectedPayable
 web3.eth.expectedExceptionPromise = require("../test_util/expectedExceptionPromise.js");
 web3.eth.makeSureAreUnlocked = require("../test_util/makeSureAreUnlocked.js");
 web3.eth.makeSureHasAtLeast = require("../test_util/makeSureHasAtLeast.js");
-web3.eth.sequentialPromise = require("../test_util/sequentialPromise.js");
 assert.topicContainsAddress = require("../test_util/topicContainsAddress.js");
 assert.topicContainsBoolean = require("../test_util/topicContainsBoolean.js");
 
@@ -44,41 +43,32 @@ contract('Pauseable', accounts => {
     });
 
     it('should allow owner to pause', async () => {
-        let txObject;
-
-        let results = await web3.eth.sequentialPromise([
-            () => contract.setPaused(true, { from: owner }).then(tx => txObject = tx),
-            () => contract.paused()
-        ]);
+        let txObject = await contract.setPaused(true, { from: owner });
+        let paused = await contract.paused();
 
         assertEventLogSetPause(txObject, owner, true);
 
-        assert.isTrue(results[1], true, "paused was not changed");
+        assert.isTrue(paused, true, "paused was not changed");
     });
 
-    it('should not allow owner to change paused to the same value', () => {
-        return web3.eth.sequentialPromise([
-            () => contract.setPaused(true, { from: owner }),
-            () => web3.eth.expectedExceptionPromise(() => 
-                    contract.setPaused(true, { from: owner, gas: gasToUse }), gasToUse)
-        ]);
+    it('should not allow owner to change paused to the same value', async () => {
+        await contract.setPaused(true, { from: owner });
+
+        return web3.eth.expectedExceptionPromise(() => 
+            contract.setPaused(true, { from: owner, gas: gasToUse }), gasToUse);
     });
 
     it('should allow owner to unpause', async () => {
-        let txObject;
+        let txObject = await contract.setPaused(true, { from: owner });
+        let paused1 = await contract.paused();
+        let txObject2 = await contract.setPaused(false, { from: owner });
+        let paused2 = await contract.paused();
 
-        let results = await web3.eth.sequentialPromise([
-            () => contract.setPaused(true, { from: owner }).then(tx => txObject = tx),
-            () => contract.paused(),
-            () => contract.setPaused(false, { from: owner }).then(tx => txObject = tx),
-            () => contract.paused()
-        ]);
+        assertEventLogSetPause(txObject, owner, true);
+        assertEventLogSetPause(txObject2, owner, false);
 
-        assertEventLogSetPause(results[0], owner, true);
-        assertEventLogSetPause(results[2], owner, false);
-
-        assert.isTrue(results[1], true, "paused was not changed");
-        assert.isFalse(results[3], false, "paused was not changed");
+        assert.isTrue(paused1, true, "paused was not changed");
+        assert.isFalse(paused2, false, "paused was not changed");
     });
 });
 
