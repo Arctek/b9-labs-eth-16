@@ -54,7 +54,7 @@ contract('Pauseable', accounts => {
     it('should not allow owner to change paused to the same value', async () => {
         await contract.setPaused(true, { from: owner });
 
-        return web3.eth.expectedExceptionPromise(() => 
+        await web3.eth.expectedExceptionPromise(() => 
             contract.setPaused(true, { from: owner, gas: gasToUse }), gasToUse);
     });
 

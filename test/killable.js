@@ -16,7 +16,6 @@ web3.eth.expectedPayableExceptionPromise = require("../test_util/expectedPayable
 web3.eth.expectedExceptionPromise = require("../test_util/expectedExceptionPromise.js");
 web3.eth.makeSureAreUnlocked = require("../test_util/makeSureAreUnlocked.js");
 web3.eth.makeSureHasAtLeast = require("../test_util/makeSureHasAtLeast.js");
-web3.eth.sequentialPromise = require("../test_util/sequentialPromise.js");
 web3.eth.calculateGasCost = require("../test_util/calculateGasCost.js");
 assert.topicContainsAddress = require("../test_util/topicContainsAddress.js");
 
@@ -128,7 +127,7 @@ contract('Killable', accounts => {
         it('should not allow owner to emergency withdraw twice', async () => {
             await contract.emergencyWithdrawal({ from: owner });
 
-            return web3.eth.expectedExceptionPromise(() => 
+            await web3.eth.expectedExceptionPromise(() => 
                 contract.emergencyWithdrawal({ from: owner, gas: gasToUse }), gasToUse);
         });
 
